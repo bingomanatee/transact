@@ -1,67 +1,108 @@
-import { BehaviorSubject, filter, map, Observable } from "rxjs";
+import { BehaviorSubject, Subject, SubjectLike } from "rxjs";
 import { Transaction } from "./Transaction";
-import { ACTIONS } from "./constants";
-import { actionParams } from "./types";
-import { Action } from "./Action";
-import { ActionManager } from "./ActionManager";
-import { asError } from "./utils";
+import { actionType, errDef, handlerObj, paramObj, transaction, tsOptions } from "./types";
+
 // @ts-ignore
 import sortBy from 'lodash.sortby';
 // @ts-ignore
 import uniq from 'lodash.uniq';
+import { Handler } from "./Handler";
+import { TRANS_STATES } from "./constants";
 
 /*
-  note -- the "action" of the TransactManager is a set of zero or more live transactions.
+  note -- the "action" of the TransactionSet is a set of zero or more live transactions.
   it does not directly manage any specific subjects - it just keeps track of pending operations.
  */
 
-export class TransactManager extends BehaviorSubject<Set<Transaction>> {
-  actionManager: ActionManager;
-
-  constructor(amInitializer: (tm: TransactManager) => ActionManager) {
+export class TransactionSet extends BehaviorSubject<Set<Transaction>> {
+  constructor({ handlers, pre, post }: tsOptions) {
     super(new Set());
-    this.actionManager = amInitializer(this);
+    this.handlers = handlers;
+    pre?.forEach((handlerConst) => this.listen(handlerConst, this.preSubject));
+    post?.forEach((handlerConst) => this.listen(handlerConst, this.postSubject));
   }
 
-  perform(action: ACTIONS | string, params: actionParams) {
+  get handlers(): handlerObj {
+    return this._handlers;
+  }
+
+  set handlers(value: handlerObj) {
+    Object.keys(value).forEach(
+      (name) => {
+        const handlerDef = value[name];
+        this._handlers[name] = new Handler(name, handlerDef);
+      });
+  }
+
+  private _handlers: handlerObj = {};
+
+  do(action: actionType, params?: paramObj, parentId?: number) {
     if (this.closed) {
       throw new Error("attempt to change a closed transactionManager");
     }
 
-    const trans = new Transaction(this, new Action(action, params));
-
-    const newSet = new Set(this.value);
-    newSet.add(trans);
-    this.next(newSet);
-
-    let error;
-    try {
-      this.actionManager.perform(trans);
-    } catch (err) {
-      error = err;
+    if (!this.handlers[action]) {
+      throw new Error(`no handler for action ${action}`);
     }
 
-    const finalSet = new Set(this.value);
-    if (error) {
-      let higherTrans = Array.from(this.value.values()).filter((trans) => {
-        trans.$id > trans.$id
-      })
-      const orderedTrans = sortBy([...higherTrans, trans], '$id').reverse();
-      uniq(orderedTrans).forEach((ot: Transaction) => {
-        this.actionManager.undo(ot);
-        if (!ot.closed) {
-          ot.complete();
-        }
-        finalSet.delete(ot);
-      });
+    const trans = new Transaction(this, action, params, parentId);
+    this.preSubject.next(trans);
+    if (trans.closed) {
+      return;
     }
-    this.next(finalSet);
-    if (error) {
-      if (!trans.closed) {
-        trans.error(asError(error));
+    this.push(trans);
+    if (!trans.closed) {
+      return trans.perform(this.handlers[action])
+    }
+    return trans.result;
+  };
+
+  public preSubject = new Subject<transaction>();
+  public postSubject = new Subject<transaction>();
+
+  private push(trans: Transaction) {
+    if (this.value.has(trans)) {
+      return;
+    }
+
+    const value = new Set(this.value);
+    value.add(trans);
+    this.next(value);
+  }
+
+  updateTrans(trans: Transaction) {
+    if (this.closed) {
+    } else if (this.value.has(trans)) {
+      const value = new Set(this.value);
+      if (trans.closed) {
+        value.delete(trans);
+        this.postSubject.next(trans);
       }
-      throw error;
+      this.next(value);
     }
-    return trans;
+  }
+
+  private listen(handlerConst: any, listener: SubjectLike<transaction>) {
+    const handler = new Handler('', handlerConst);
+
+    listener.subscribe({
+      next(trans: transaction) {
+        if (trans.closed) {
+          return;
+        }
+        try {
+          handler.perform(trans);
+        } catch (err) {
+          try {
+            handler.forErrors(err as errDef).perform(trans);
+          } catch (err2) {
+            trans.result = err2;
+            trans.state = TRANS_STATES.failed;
+          }
+        }
+      },
+      error(_err) {
+      }
+    })
   }
 }

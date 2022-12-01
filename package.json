@@ -34,6 +34,9 @@
   "typings": "./dist/main.d.ts",
   "description": "a set of utilities for more granular type inspection, string manipulation.",
   "dependencies": {
+    "@wonderlandlabs/walrus": "^0.0.2",
+    "lodash.sortby": "^4.7.0",
+    "lodash.uniq": "^4.5.0",
     "rxjs": "^7.5.7"
   }
 }

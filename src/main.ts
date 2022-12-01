@@ -1,5 +1,3 @@
-export { ChangeManager } from "./ChangeManager";
-export { TransactManager } from './TransactManager';
-export { Change } from './Change';
+export { TransactionSet } from './TransactionSet';
 
 export * as constants from './constants';
