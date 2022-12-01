@@ -1,5 +1,5 @@
 import tap from "tap";
-import { ChangeManager, TransactManager, constants } from "./../dist/main.js";
+import { TransactionSet, constants } from "./../dist/main.js";
 import pkg from "../package.json" assert { type: 'json' };
 
 const { name: pkgName } = pkg;
@@ -7,34 +7,9 @@ const { name: pkgName } = pkg;
 tap.test(pkgName, (suite) => {
   suite.test('transact', (txTest) => {
 
-    txTest.test('healthy use', (huTest) => {
-      class ChangeMgr extends ChangeManager {
-        constructor() {
-          super();
-          this._value = [];
-        }
+    txTest.test('TransactionSet', (huTest) => {
+      let tm = new TransactManager();
 
-        execute(trans) {
-          const change = trans.value;
-          switch (change.action) {
-            case constants.ACTIONS.set:
-              change.before = this._value;
-              this._value = [...this._value];
-
-              this._value[change.key] = change.value;
-              break;
-
-            default:
-              throw new Error('cannot handle action', { cause: change });
-          }
-        }
-      }
-
-      let cm
-      const tm = new TransactManager(() => {
-        cm = new ChangeMgr();
-        return cm;
-      })
 
       const history = [];
       let complete = false;
@@ -64,7 +39,7 @@ tap.test(pkgName, (suite) => {
       huTest.end();
     })
 
-    txTest.test('healthy use with value protectors', (huTest) => {
+    txTest.test('healthy use with action protectors', (huTest) => {
 
       class ChangeMgr extends ChangeManager {
         constructor(mgr) {
@@ -165,6 +140,7 @@ tap.test(pkgName, (suite) => {
 
           if (['set', 'push'].includes(change.action)) {
             if (change.value % 2) {
+              console.log('bad action: ', change.value);
               throw new Error('only even values accepted');
             }
           }
@@ -173,7 +149,6 @@ tap.test(pkgName, (suite) => {
         execute(trans) {
           const change = trans.value;
           try {
-
             change.before = this._value;
             let value = [...this._value];
             switch (change.action) {
@@ -189,9 +164,17 @@ tap.test(pkgName, (suite) => {
                 throw new Error('cannot handle action', { cause: trans });
             }
 
+            console.log('set action to ', value, 'due to ', change);
             this._value = value;
           } catch (err) {
             throw err;
+          }
+        }
+
+        undo(trans) {
+          if (trans.value.before) {
+            console.log('resetting to ', trans.value.before);
+            this._value = trans.value.before;
           }
         }
       }
@@ -206,6 +189,7 @@ tap.test(pkgName, (suite) => {
       let complete = false;
       tm.subject.subscribe({
         next(value) {
+          console.log('--- subject result:', value);
           history.push(value);
         },
         error(err) {
@@ -227,13 +211,14 @@ tap.test(pkgName, (suite) => {
         }
       })
 
+      huTest.same(errors.length, 4);
+      console.log('partial history: ', history);
       huTest.same(history,
         [[], [2], [2, 4], [2, 4, 6], [2, 4, 6, 8]]
       );
       huTest.notOk(complete);
       huTest.end();
-    })
-
+    });
 
     txTest.end();
   });
