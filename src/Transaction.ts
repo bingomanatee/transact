@@ -9,7 +9,7 @@ export class Transaction {
   constructor(manager: TransactionSet, action: actionType, params?: paramObj, parentId?: number) {
     this.state = TRANS_STATES.new;
     this.action = action;
-    this.transSet = manager;
+    this.transactionSet = manager;
     this.params = params;
     this.id = ++nextId;
     if (parentId) {
@@ -21,7 +21,7 @@ export class Transaction {
 
   public state: TRANS_STATES;
   public readonly action: actionType;
-  public readonly transSet: TransactionSet;
+  public readonly transactionSet: TransactionSet;
   public readonly id: number;
   public readonly parentId?: number;
   public result: any;
@@ -53,7 +53,7 @@ export class Transaction {
     } else {
       this.result = err;
       this.state = TRANS_STATES.failed;
-      this.transSet.updateTrans(this);
+      this.transactionSet.updateTrans(this);
       throw err;
     }
   }
@@ -94,7 +94,7 @@ export class Transaction {
     if (value && !this.closed) {
       this.state = value;
     }
-    this.transSet.updateTrans(this); // may purge from transSet
+    this.transactionSet.updateTrans(this); // may purge from transactionSet
   }
 
   get closed() {
@@ -127,6 +127,7 @@ export class Transaction {
         this.handleError(new Error('generator "long loop" (>20)'), handler);
       }
     }
+    return this.result;
   }
 
   private performBase(handler: handlerClass) {
@@ -136,6 +137,7 @@ export class Transaction {
     } catch (err) {
       this.handleError(err as errDef, handler);
     }
+    return this.result;
   }
 
   private async performAsync(handler: handlerClass) {
@@ -145,6 +147,7 @@ export class Transaction {
     } catch (err) {
       this.handleError(err as errDef, handler);
     }
+    return this.result;
   }
 
   toJSON(withId = false): paramObj {

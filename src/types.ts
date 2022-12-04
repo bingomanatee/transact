@@ -24,7 +24,7 @@ export type transactionSet = {
 export type transaction = {
   state: TRANS_STATES;
   action: actionType;
-  transSet: transactionSet;
+  transactionSet: transactionSet;
   id: number;
   parentId?: number;
   params?: paramObj;
