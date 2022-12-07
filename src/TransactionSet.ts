@@ -46,12 +46,23 @@ export class TransactionSet extends BehaviorSubject<Set<Transaction>> {
     }
 
     const trans = new Transaction(this, action, params, parentId);
+    let result;
+
     this.preSubject.next(trans);
     if (trans.closed) {
+      this.postSubject.next(trans);
+      if (trans.state === TRANS_STATES.failed) {
+        throw trans.result;
+      }
       return trans.result;
+    } else {
+      this.push(trans);
+      result = trans.perform(this.handlers[action]);
     }
-    this.push(trans);
-    return trans.perform(this.handlers[action])
+    if (trans.state === TRANS_STATES.failed) {
+      throw trans.result;
+    }
+    return result;
   };
 
   public preSubject = new Subject<transaction>();

@@ -29,17 +29,32 @@ export class Transaction {
   params?: paramObj;
 
   perform(handler: handlerClass) {
+    this.handled = true;
     switch (handler.perform.constructor.name) {
       case 'GeneratorFunction':
         return this.performGenerator(handler);
         break;
 
       case 'AsyncGeneratorFunction':
-        return this.performAsyncGenerator(handler);
+        return new Promise(async (done, error) => {
+          try {
+            await this.performAsyncGenerator(handler);
+            done(this.result);
+          } catch (err) {
+            error(err);
+          }
+        });
         break;
 
       case 'AsyncFunction':
-        return this.performAsync(handler);
+        return new Promise(async (done, error) => {
+          try {
+            await this.performAsync(handler);
+            done(this.result);
+          } catch (err) {
+            error(err);
+          }
+        });
         break;
 
       default:
@@ -54,7 +69,6 @@ export class Transaction {
       this.result = err;
       this.state = TRANS_STATES.failed;
       this.transactionSet.updateTrans(this);
-      throw err;
     }
   }
 
@@ -70,8 +84,8 @@ export class Transaction {
           if (done) {
             if (!this.closed) {
               this.result = value;
+              this.updateState(TRANS_STATES.closed);
             }
-            this.updateState(TRANS_STATES.closed);
           } else {
             this.updateState(value);
           }
@@ -91,10 +105,10 @@ export class Transaction {
   }
 
   private updateState(value?: any) {
-    if (value && !this.closed) {
+    if (value !== this.state) {
       this.state = value;
+      this.transactionSet.updateTrans(this); // may purge from transactionSet
     }
-    this.transactionSet.updateTrans(this); // may purge from transactionSet
   }
 
   get closed() {
@@ -141,10 +155,14 @@ export class Transaction {
   }
 
   private async performAsync(handler: handlerClass) {
+    console.log('performing async', this.action, this.params );
     try {
       this.result = await handler.perform(this);
+      console.log('--- async - done with', this.action,
+        ' updateState from ', this.state, 'to', TRANS_STATES.closed);
       this.updateState(TRANS_STATES.closed);
     } catch (err) {
+      console.log('--- error performing async ', this.action, err);
       this.handleError(err as errDef, handler);
     }
     return this.result;

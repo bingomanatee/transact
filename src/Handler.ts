@@ -13,7 +13,7 @@ export class Handler {
         break
 
       case 'object':
-        const { handler, error } = value;
+        const { next: handler, error } = value;
         this.init(handler, error);
         break;
 

@@ -220,6 +220,7 @@ tap.test(pkgName, (suite) => {
           }
         })
 
+        console.log('=============== async test');
         let promise = ts.do('addPoint', { x: 1, y: 2 });
 
         asyncTest.same(historyToJson(history), [
