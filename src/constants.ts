@@ -1,5 +1,5 @@
 export enum ACTIONS {
-  perform = 'PER', // execute: 'action' must be a function; will accept the transaction as sn argument
+  perform = 'PER', // execute: 'action' must be a function; will accept the transObj as sn argument
   create = 'CRE', // insert a new element
   delete = 'DEL', // remove an element
   set = 'SET', // change an elements property

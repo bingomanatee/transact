@@ -6,15 +6,12 @@ let nextId = 0;
 
 export class Transaction {
 
-  constructor(manager: TransactionSet, action: actionType, params?: paramObj, parentId?: number) {
+  constructor(manager: TransactionSet, action: actionType, params: any[]) {
     this.state = TRANS_STATES.new;
     this.action = action;
     this.transactionSet = manager;
     this.params = params;
     this.id = ++nextId;
-    if (parentId) {
-      this.parentId = parentId;
-    }
   }
 
   public meta = new Map(); // scratch for handlers to note progress
@@ -26,11 +23,11 @@ export class Transaction {
   public readonly parentId?: number;
   public result: any;
   public handled: boolean = false;
-  params?: paramObj;
+  params: any[];
 
   perform(handler: handlerClass) {
     this.handled = true;
-    switch (handler.perform.constructor.name) {
+    switch (handler.type) {
       case 'GeneratorFunction':
         return this.performGenerator(handler);
         break;
@@ -155,14 +152,10 @@ export class Transaction {
   }
 
   private async performAsync(handler: handlerClass) {
-    console.log('performing async', this.action, this.params );
     try {
       this.result = await handler.perform(this);
-      console.log('--- async - done with', this.action,
-        ' updateState from ', this.state, 'to', TRANS_STATES.closed);
       this.updateState(TRANS_STATES.closed);
     } catch (err) {
-      console.log('--- error performing async ', this.action, err);
       this.handleError(err as errDef, handler);
     }
     return this.result;

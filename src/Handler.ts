@@ -1,13 +1,13 @@
 import { type } from "@wonderlandlabs/walrus";
-import { errDef, errorFn, handlerFn } from "./types";
+import { errDef, errorFn, handlerFn, transObj } from "./types";
 
 export class Handler {
   public name: string;
 
   constructor(name: string, value: any) {
     this.name = name;
-    const t = type.describe(value) as {type: string};
-     switch (t.type) {
+    const t = type.describe(value) as { type: string };
+    switch (t.type) {
       case 'array':
         this.init(value[0], value[1]);
         break
@@ -29,14 +29,24 @@ export class Handler {
 
 
   error?: errorFn;
-  perform: handlerFn = function () {};
+
+  perform(trans: transObj) {
+    return this.handler(trans, ...trans.params);
+  }
+
+  private handler: handlerFn = () => {
+  };
+
+  get type() {
+    return this.handler.constructor.name
+  }
 
   private init(handler: handlerFn, error?: errorFn) {
-    this.perform = handler;
+    this.handler = handler;
     this.error = error;
   }
 
-  forErrors(err: errDef) : Handler {
+  forErrors(err: errDef): Handler {
     return new Handler(this.name, (trans: any) => {
       if (this.error) {
         return this.error(err, trans);

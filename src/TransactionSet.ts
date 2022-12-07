@@ -1,6 +1,6 @@
 import { BehaviorSubject, Subject, SubjectLike } from "rxjs";
 import { Transaction } from "./Transaction";
-import { actionType, errDef, handlerObj, paramObj, transaction, tsOptions } from "./types";
+import { actionType, errDef, handlerObj, transObj, tsOptions } from "./types";
 
 // @ts-ignore
 import sortBy from 'lodash.sortby';
@@ -36,7 +36,7 @@ export class TransactionSet extends BehaviorSubject<Set<Transaction>> {
 
   private _handlers: handlerObj = {};
 
-  do(action: actionType, params?: paramObj, parentId?: number) {
+  do(action: actionType, ...params: any[]) {
     if (this.closed) {
       throw new Error("attempt to change a closed transactionManager");
     }
@@ -45,7 +45,7 @@ export class TransactionSet extends BehaviorSubject<Set<Transaction>> {
       throw new Error(`no handler for action ${action}`);
     }
 
-    const trans = new Transaction(this, action, params, parentId);
+    const trans = new Transaction(this, action, params);
     let result;
 
     this.preSubject.next(trans);
@@ -65,8 +65,8 @@ export class TransactionSet extends BehaviorSubject<Set<Transaction>> {
     return result;
   };
 
-  public preSubject = new Subject<transaction>();
-  public postSubject = new Subject<transaction>();
+  public preSubject = new Subject<transObj>();
+  public postSubject = new Subject<transObj>();
 
   private push(trans: Transaction) {
     if (this.value.has(trans)) {
@@ -90,11 +90,11 @@ export class TransactionSet extends BehaviorSubject<Set<Transaction>> {
     }
   }
 
-  private listen(handlerConst: any, listener: SubjectLike<transaction>) {
+  private listen(handlerConst: any, listener: SubjectLike<transObj>) {
     const handler = new Handler('', handlerConst);
 
     listener.subscribe({
-      next(trans: transaction) {
+      next(trans: transObj) {
         if (trans.closed) {
           return;
         }

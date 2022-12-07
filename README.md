@@ -108,20 +108,20 @@ The reason is that in general you don't want to jam up your application with pen
 than necessary. 
 
 I.e., just because you *can* write async handlers doesn't mean you *should*. Reason being, if you 
-suspend a transaction's update cycle during the lifespan of an async function, your app freezes, 
+suspend a transObj's update cycle during the lifespan of an async function, your app freezes, 
 and that is rarely a desirable outcome. 
 
 ### TransactionSet emission
 
 TransactionSet emits the pending transactions every time 
-* a transaction is added to the pending transaction set
+* a transObj is added to the pending transObj set
 * a pending transactions' state is changed
-* a transaction is removed from pending queue
+* a transObj is removed from pending queue
 
 closed/failed transactions are removed from the queue before the pending set is emitted. 
 
 The transactions in an emitted set should be ordered in ascending order; but when in doubt,
-each transaction as an integral ID that reflects the order of transaction creation. 
+each transObj as an integral ID that reflects the order of transObj creation. 
 
 ### Basic (synchronous) Flow Control
 
@@ -136,32 +136,32 @@ the calling of a single do method is as follows:
 5. `myTransaction.perform(handler)` is executed, The handler is the one defined  \
    to handle a specific named action. 
    * The output of the handler (if any) is embedded into the transactions' "result" field. 
-   * The transaction is set to state: closed
-   * the `transactionState.updateTrans(trans)` removes the closed transaction from the queue
+   * The transObj is set to state: closed
+   * the `transactionState.updateTrans(trans)` removes the closed transObj from the queue
    * The new pending transactions (less the current one) are emitted from the TransactionSet. 
 
 ## Error Handling inside action execution
 
 Transactions can be "closed" without causing errors to be thrown. 
 Any errors thrown by a handler or pre/post hook will be captured into
-a transactions' response and thrown after the transaction has been 
+a transactions' response and thrown after the transObj has been 
 processed.
 
 ### Errors / closed transactions from the preSubject hook 
 
-An error throw (or captured in a failed transaction) by a preSubject
+An error throw (or captured in a failed transObj) by a preSubject
 hook will cause the handler to be skipped, and be set as the transactions'
-result; the transaction will be marked as `state:failed`, but the 
-postSubject will still receive the transaction.
+result; the transObj will be marked as `state:failed`, but the 
+postSubject will still receive the transObj.
 
-Similarly, closing a transaction in the preSubject listener will also
+Similarly, closing a transObj in the preSubject listener will also
 cause the handler to be skipped, but postSubject hooks will still
-receive the transaction. 
+receive the transObj. 
 
 Therefore, when writing postSubject hooks, be prepared to receive 
 failed/closed transactions and don't assume they passed through the 
-hook. (the 'handled' property of a transaction indicates that the 
-transaction reached the `perform` hook. )
+hook. (the 'handled' property of a transObj indicates that the 
+transObj reached the `perform` hook. )
 
 in both cases *nothing will be emitted from the transactionSet; the 
 presumption is that the lack of execution of the actual handler
@@ -171,7 +171,7 @@ preSubject hook(s) will be reset by the postSubject hook.
 ### Errors / closed transactions from handlers
 
 Errors thrown by handler hooks will be set as the transactions' result
-and the transaction will be marked as state:failed. 
+and the transObj will be marked as state:failed. 
 
 You can write a "rescue" hook that responds to any thrown error; instead of a 
 single function you can define a handler response as `[handleFn, onErrorFn]` or 
@@ -188,7 +188,7 @@ they are to be avoided whenever possible.
 ### Multiple Transaction Sets 
 
 You can have more than one in your application if necessary, but *all actions that you want to synchronize transactionally
-must be managed by the same transaction set. For instance, you may have one transaction
+must be managed by the same transObj set. For instance, you may have one transObj
 set for sending data back and forth to your APIs and a second one for managing a particular 
 client side form. But an error in your API TransactionSet won't cause your form TransactionSet to 
 register an error (unless you do so manually), or vice versa. 

@@ -24,8 +24,8 @@ tap.test(pkgName, (suite) => {
         let ts = new TransactionSet(
           {
             handlers: {
-              addPoint: (trans) => {
-                points.push(trans.params);
+              addPoint: (trans, point) => {
+                points.push(point);
               }
             }
           }
@@ -48,17 +48,16 @@ tap.test(pkgName, (suite) => {
 
         ts.do('addPoint', { x: 1, y: 2 });
 
-        basicTest.same(history.map(
-            transList => Array.from(transList).map(trans => trans.toJSON(false))),
+        basicTest.same(historyToJson(history),
           [
             [],
             [
               {
                 "action": "addPoint",
-                "params": {
+                "params": [{
                   "x": 1,
                   "y": 2,
-                },
+                }],
               },
             ],
             [],
@@ -73,21 +72,21 @@ tap.test(pkgName, (suite) => {
         let ts = new TransactionSet(
           {
             handlers: {
-              newPoint(trans) {
+              newPoint() {
                 let point = { x: 0, y: 0, id: ++nextId };
                 points.push(point);
                 return point;
               },
-              setPointCoord(trans) {
-                const { id, field, value } = trans.params;
+              setPointCoord(trans,  ...args ) {
+                const [{ id, field, value }] = args;
                 let point = points.find((p) => p.id === id);
                 point[field] = value;
               },
-              addPoint(trans) {
+              addPoint(trans, point) {
                 const newPoint = trans.transactionSet.do('newPoint');
-                console.log('newPoint:', newPoint);
-                Object.keys(trans.params).forEach((field) => {
-                  const value = trans.params[field];
+
+                Object.keys(point).forEach((field) => {
+                  const value = point[field];
                   trans.transactionSet.do(
                     'setPointCoord',
                     { id: newPoint.id, field, value }
@@ -120,69 +119,69 @@ tap.test(pkgName, (suite) => {
           [[],
             [{
               "action": "addPoint",
-              "params": {
+              "params": [{
                 "x": 1,
                 "y": 2
-              }
+              }]
             }],
             [{
               "action": "addPoint",
-              "params": {
+              "params": [{
                 "x": 1,
                 "y": 2
-              }
+              }]
             },
-              { "action": "newPoint", params: undefined }],
+              { "action": "newPoint", params: [] }],
             [{
               "action": "addPoint",
-              "params": {
+              "params": [{
                 "x": 1,
                 "y": 2
-              }
+              }]
             }],
             [{
               "action": "addPoint",
-              "params": {
+              "params": [{
                 "x": 1,
                 "y": 2
-              }
+              }]
             },
               {
                 "action": "setPointCoord",
-                "params": {
+                "params": [{
                   "id": 101,
                   "field": "x",
                   "value": 1
-                }
+                }]
               }],
             [{
               "action": "addPoint",
-              "params": {
+              "params": [{
                 "x": 1,
                 "y": 2
-              }
+              }]
             }],
             [{
               "action": "addPoint",
-              "params": {
+              "params": [{
                 "x": 1,
                 "y": 2
-              }
+              }]
             },
               {
                 "action": "setPointCoord",
-                "params": {
+                "params": [{
                   "id": 101,
                   "field": "y",
                   "value": 2
-                }
+                }]
               }],
             [{
               "action": "addPoint",
-              "params": {
+              "params": [{
                 "x": 1,
                 "y": 2
-              }
+              }]
             }],
 
             []]
@@ -197,9 +196,9 @@ tap.test(pkgName, (suite) => {
         let ts = new TransactionSet(
           {
             handlers: {
-              addPoint: async (trans) => {
+              addPoint: async (trans, point) => {
                 await Promise.resolve(null);
-                points.push(trans.params);
+                points.push(point);
               }
             }
           }
@@ -220,7 +219,6 @@ tap.test(pkgName, (suite) => {
           }
         })
 
-        console.log('=============== async test');
         let promise = ts.do('addPoint', { x: 1, y: 2 });
 
         asyncTest.same(historyToJson(history), [
@@ -228,14 +226,15 @@ tap.test(pkgName, (suite) => {
           [
             {
               "action": "addPoint",
-              "params": {
+              "params": [{
                 "x": 1,
                 "y": 2,
-              },
+              }],
             },
           ]
         ]);
         asyncTest.same(points, []);
+
         await promise;
         asyncTest.same(
           historyToJson(history),
@@ -244,10 +243,10 @@ tap.test(pkgName, (suite) => {
             [
               {
                 "action": "addPoint",
-                "params": {
+                "params": [{
                   "x": 1,
                   "y": 2,
-                },
+                }],
               },
             ],
             []
@@ -262,12 +261,11 @@ tap.test(pkgName, (suite) => {
         let ts = new TransactionSet(
           {
             handlers: {
-              addPoint: (trans) => {
-                const point = trans.params;
+              addPoint: (trans, point) => {
                 if (!('x' in point && 'y' in point)) {
                   throw new Error('Bad Point');
                 }
-                points.push(trans.params);
+                points.push(point);
               }
             }
           }
@@ -304,11 +302,11 @@ tap.test(pkgName, (suite) => {
           historyToJson(history),
           [
             [],
-            [{ "action": "addPoint", "params": { "x": 1, "y": 2 } }],
+            [{ "action": "addPoint", "params": [{ "x": 1, "y": 2 }] }],
             [],
-            [{ "action": "addPoint", "params": { "x": 2, "z": 3 } }],
+            [{ "action": "addPoint", "params": [{ "x": 2, "z": 3 }] }],
             [],
-            [{ "action": "addPoint", "params": { "x": 4, "y": 8 } }],
+            [{ "action": "addPoint", "params": [{ "x": 4, "y": 8 }] }],
             []
           ]
         );
