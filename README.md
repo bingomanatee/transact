@@ -166,7 +166,7 @@ transObj reached the `perform` hook. )
 in both cases *nothing will be emitted from the transactionSet; the 
 presumption is that the lack of execution of the actual handler
 means no change will be enacted, and any partial work done by the
-preSubject hook(s) will be reset by the postSubject hook. 
+preSubject hook(s) will be reset by the postSubject hook.
 
 ### Errors / closed transactions from handlers
 
@@ -183,7 +183,10 @@ in both cases the error function accepts `(error, trans)`. If a handler has a
 ### Errors in postSubject hooks
 
 Errors in postSubject hooks are for the most part treated as errors in handlers; 
-they are to be avoided whenever possible. 
+they are to be avoided whenever possible. note, postSubject hooks will still get transactions
+even if the transactions are closed/have errors, so observe state inside hooks before executing changes. 
+
+postSubject hooks can change state / return value of transactions. 
 
 ### Multiple Transaction Sets 
 
