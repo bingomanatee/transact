@@ -19,7 +19,9 @@ export class TransactionSet extends BehaviorSubject<Set<Transaction>> {
     super(new Set());
     this.handlers = handlers;
     pre?.forEach((handlerConst) => this.listen(handlerConst, this.preSubject));
-    post?.forEach((handlerConst) => this.listen(handlerConst, this.postSubject));
+    post?.forEach((handlerConst) => {
+      this.listen(handlerConst, this.postSubject)
+    });
   }
 
   get handlers(): handlerObj {
@@ -37,10 +39,6 @@ export class TransactionSet extends BehaviorSubject<Set<Transaction>> {
   private _handlers: handlerObj = {};
 
   do(action: actionType, ...params: any[]) {
-    if (this.closed) {
-      throw new Error("attempt to change a closed transactionManager");
-    }
-
     if (!this.handlers[action]) {
       throw new Error(`no handler for action ${action}`);
     }
@@ -79,8 +77,7 @@ export class TransactionSet extends BehaviorSubject<Set<Transaction>> {
   }
 
   updateTrans(trans: Transaction) {
-    if (this.closed) {
-    } else if (this.value.has(trans)) {
+    if (this.value.has(trans)) {
       const value = new Set(this.value);
       if (trans.closed) {
         value.delete(trans);
@@ -93,11 +90,8 @@ export class TransactionSet extends BehaviorSubject<Set<Transaction>> {
   private listen(handlerConst: any, listener: SubjectLike<transObj>) {
     const handler = new Handler('', handlerConst);
 
-    listener.subscribe({
+    return listener.subscribe({
       next(trans: transObj) {
-        if (trans.closed) {
-          return;
-        }
         try {
           handler.perform(trans);
         } catch (err) {
@@ -109,7 +103,7 @@ export class TransactionSet extends BehaviorSubject<Set<Transaction>> {
           }
         }
       },
-      error(_err) {
+      error() {
       }
     })
   }

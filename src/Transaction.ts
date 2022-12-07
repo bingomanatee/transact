@@ -163,10 +163,14 @@ export class Transaction {
 
   toJSON(withId = false): paramObj {
     let out = {
-      action: this.action, params: this.params
+      action: this.action, params: this.params, state: this.state
     }
     if (withId) {
       return { id: this.id, parentId: this.parentId, ...out };
+    }
+    if (this.meta.size > 0) {
+      // @ts-ignore
+      out.meta = Array.from(this.meta.entries());
     }
     return out;
   }
