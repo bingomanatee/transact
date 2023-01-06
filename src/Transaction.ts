@@ -1,6 +1,6 @@
 import { TransactionSet } from "./TransactionSet";
 import { END_STATES, TRANS_STATES } from "./constants";
-import { actionType, errDef, handlerClass, paramObj } from "./types";
+import { actionType, errDef, handlerClass, paramObj, transactionSet } from "./types";
 
 let nextId = 0;
 
@@ -18,7 +18,7 @@ export class Transaction {
 
   public state: TRANS_STATES;
   public readonly action: actionType;
-  public readonly transactionSet: TransactionSet;
+  public readonly transactionSet: transactionSet;
   public readonly id: number;
   public readonly parentId?: number;
   public result: any;

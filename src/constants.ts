@@ -19,3 +19,5 @@ export const END_STATES = [
   TRANS_STATES.closed,
   TRANS_STATES.failed,
 ]
+
+export const TRANSACT = '$$transact$$';

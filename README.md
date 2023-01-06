@@ -188,6 +188,13 @@ even if the transactions are closed/have errors, so observe state inside hooks b
 
 postSubject hooks can change state / return value of transactions. 
 
+## Dynamic transactions
+
+The transaction system is oriented around the Redux motif of 
+pre-determined actions embedded in the transactionSet. However,
+it does allow dynamic functions to be passed in and managed in the same
+way as 
+
 ### Multiple Transaction Sets 
 
 You can have more than one in your application if necessary, but *all actions that you want to synchronize transactionally
