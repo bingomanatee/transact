@@ -21,10 +21,7 @@ export type tsOptions = { handlers: handlerDef, pre?: any[], post?: any[] };
 
 export type transactionSet = {
   addHandler: (name: string, def: any) => any;
-  addPre: (def: any) => any;
-  addPost: (def: any) => any;
   transact: (fn: transactFn) => any;
-  transactN: (name: string, fn: transactFn) => any;
   do: (action: actionType, params?: paramObj) => any;
   updateTrans: (trans: transObj) => void;
 } & Subject<Set<transObj>>;
@@ -37,6 +34,7 @@ export type transObj = {
   parentId?: number;
   params: any[];
   result: any;
+  meta: Map<string, any>;
   closed: boolean;
   toJSON: (withId?: boolean) => paramObj
 }

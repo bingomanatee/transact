@@ -1,6 +1,6 @@
-import { BehaviorSubject, Subject, SubjectLike } from "rxjs";
+import { BehaviorSubject } from "rxjs";
 import { Transaction } from "./Transaction";
-import { actionType, errDef, handlerClass, handlerObj, transactFn, transObj, tsOptions } from "./types";
+import { actionType, handlerClass, handlerObj, transactFn, transactionSet, transObj, tsOptions } from "./types";
 
 // @ts-ignore
 import sortBy from 'lodash.sortby';
@@ -10,28 +10,14 @@ import { Handler } from "./Handler";
 import { TRANS_STATES, TRANSACT } from "./constants";
 
 /*
-  note -- the "action" of the TransactionSet is a set of zero or more live transactions.
+  note -- the "value" of the TransactionSet is a set of zero or more live transactions.
   it does not directly manage any specific subjects - it just keeps track of pending operations.
  */
 
-export class TransactionSet extends BehaviorSubject<Set<transObj>> {
-  constructor({ handlers, pre, post }: tsOptions) {
+export class TransactionSet extends BehaviorSubject<Set<transObj>> implements transactionSet {
+  constructor({ handlers }: tsOptions) {
     super(new Set());
     this.handlers = handlers;
-    pre?.forEach((handlerConst) => {
-      this.addPre(handlerConst);
-    });
-    post?.forEach((handlerConst) => {
-      this.addPost(handlerConst);
-    });
-  }
-
-  addPre(handlerConst: any) {
-    this.listen(handlerConst, this.preSubject);
-  }
-
-  addPost(handlerConst: any) {
-    this.listen(handlerConst, this.postSubject)
   }
 
   get handlers(): handlerObj {
@@ -64,18 +50,9 @@ export class TransactionSet extends BehaviorSubject<Set<transObj>> {
 
     const trans = new Transaction(this, action, params);
     let result;
+    this.push(trans);
+    result = trans.perform(handler);
 
-    this.preSubject.next(trans);
-    if (trans.closed) {
-      this.postSubject.next(trans);
-      if (trans.state === TRANS_STATES.failed) {
-        throw trans.result;
-      }
-      return trans.result;
-    } else {
-      this.push(trans);
-      result = trans.perform(handler);
-    }
     if (trans.state === TRANS_STATES.failed) {
       throw trans.result;
     }
@@ -87,14 +64,6 @@ export class TransactionSet extends BehaviorSubject<Set<transObj>> {
     const handler = new Handler(name, fn);
     return this._do(name, handler, params);
   };
-
-  transactN(name: string, fn: transactFn, ...params: any[]) {
-    const handler = new Handler(name, fn);
-    return this._do(name, handler, params);
-  };
-
-  public preSubject = new Subject<transObj>();
-  public postSubject = new Subject<transObj>();
 
   private push(trans: Transaction) {
     if (this.value.has(trans)) {
@@ -111,30 +80,9 @@ export class TransactionSet extends BehaviorSubject<Set<transObj>> {
       const value = new Set(this.value);
       if (trans.closed) {
         value.delete(trans);
-        this.postSubject.next(trans);
       }
       this.next(value);
     }
   }
 
-  private listen(handlerConst: any, listener: SubjectLike<transObj>) {
-    const handler = new Handler('', handlerConst);
-
-    return listener.subscribe({
-      next(trans: transObj) {
-        try {
-          handler.perform(trans);
-        } catch (err) {
-          try {
-            handler.forErrors(err as errDef).perform(trans);
-          } catch (err2) {
-            trans.result = err2;
-            trans.state = TRANS_STATES.failed;
-          }
-        }
-      },
-      error() {
-      }
-    })
-  }
 }

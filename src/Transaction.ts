@@ -14,7 +14,7 @@ export class Transaction {
     this.id = ++nextId;
   }
 
-  public meta = new Map(); // scratch for handlers to note progress
+  public meta = new Map<string, any>(); // scratch for handlers to note progress
 
   public state: TRANS_STATES;
   public readonly action: actionType;
